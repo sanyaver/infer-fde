@@ -1,0 +1,9 @@
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+patchright
+playwright==1.44.0
+playwright-stealth==1.0.6
+redis[hiredis]==5.0.4
+python-dotenv==1.0.1
+pydantic==2.7.1
+aiofiles==23.2.1

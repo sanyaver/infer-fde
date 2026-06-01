@@ -1,0 +1,11 @@
+.env
+backend/geico_session.json
+backend/allstate_session.json
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+node_modules/
+dist/
+backend/frontend/dist/
+

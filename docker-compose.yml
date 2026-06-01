@@ -1,0 +1,62 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - PROXY_URL=${PROXY_URL:-}
+      - HEADLESS=${HEADLESS:-true}
+      - SLOW_MO=${SLOW_MO:-0}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - BROWSER_CHANNEL=${BROWSER_CHANNEL:-chrome}
+      # Allstate persistent-profile mode: seed locally with save_allstate_session.py,
+      # then the host profile dir is mounted into the container below.
+      - ALLSTATE_PROFILE_DIR=/allstate-profile
+      # CDP fallback (dev only): ALLSTATE_CDP_URL=http://host.docker.internal:9222
+      - ALLSTATE_CDP_URL=${ALLSTATE_CDP_URL:-}
+    volumes:
+      - ${ALLSTATE_PROFILE_DIR:-~/.allstate-chrome-profile}:/allstate-profile
+    depends_on:
+      redis:
+        condition: service_healthy
+    # Playwright needs shared memory for Chrome
+    shm_size: "2g"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  redis_data:

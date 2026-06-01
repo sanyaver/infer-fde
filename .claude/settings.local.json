@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "Bash(node *)",
+      "Bash(docker-compose -f /Users/apple/Documents/infer-fde/docker-compose.yml ps)",
+      "Bash(curl -s -X POST http://localhost:8000/start-session -H 'Content-Type: application/json' -d '{\"carrier\":\"geico\",\"username\":\"test\",\"password\":\"test\"}')",
+      "Bash(python3 *)",
+      "WebSearch",
+      "Bash(npm run *)",
+      "Bash(python -c \"from carriers import REGISTRY; print\\(list\\(REGISTRY.keys\\(\\)\\)\\)\")",
+      "Bash(chmod +x *)",
+      "Bash(docker --version)"
+    ]
+  }
+}
