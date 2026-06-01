@@ -57,8 +57,10 @@ class AllstateCarrier(BaseCarrier):
         except Exception:
             pass
 
-        # Fresh login with the caller's credentials
-        await page.goto(self.login_url, wait_until="domcontentloaded", timeout=30_000)
+        # Fresh login with the caller's credentials.
+        # wait_until="commit" is intentional — Akamai's redirect chain (login →
+        # index-allstate.html → login) aborts domcontentloaded on the first URL.
+        await page.goto(self.login_url, wait_until="commit", timeout=30_000)
         await self._jitter(500, 1000)
 
         # Akamai may serve index-allstate.html first — a blank JS challenge page that
@@ -75,9 +77,6 @@ class AllstateCarrier(BaseCarrier):
         except Exception:
             pass
 
-        # Give Akamai's inline sensor script time to finish and let React render the form
-        await self._jitter(2000, 3000)
-
         # Find username field — try multiple selectors in case Allstate updated their form
         username_sel = None
         for sel in [
@@ -86,10 +85,9 @@ class AllstateCarrier(BaseCarrier):
             'input[autocomplete="username"]',
             'input[type="email"]',
             "#email",
-            'input[name="email"]',
         ]:
             try:
-                await page.wait_for_selector(sel, timeout=8_000, state="visible")
+                await page.wait_for_selector(sel, timeout=10_000, state="visible")
                 username_sel = sel
                 break
             except Exception:
@@ -97,16 +95,14 @@ class AllstateCarrier(BaseCarrier):
 
         if not username_sel:
             raise RuntimeError(
-                f"Allstate: login form not found after 30s. "
-                f"URL={page.url} title='{await page.title()}' — "
-                "Akamai may be blocking this IP or the portal selectors changed."
+                f"Allstate: login form not found. URL={page.url} — "
+                "Akamai may be blocking this IP."
             )
 
         await page.click(username_sel)
         await page.type(username_sel, username, delay=60)
         await self._jitter()
 
-        # Password field — same fallback approach
         password_sel = None
         for sel in ["#password", 'input[name="password"]', 'input[type="password"]']:
             try:
@@ -123,25 +119,7 @@ class AllstateCarrier(BaseCarrier):
         await page.type(password_sel, password, delay=60)
         await self._jitter()
 
-        # Submit — try multiple button patterns
-        submitted = False
-        for sel in [
-            'button[name="frmButton"]',
-            'button[type="submit"]',
-            'input[type="submit"]',
-            'button:has-text("Log in")',
-            'button:has-text("Sign in")',
-        ]:
-            try:
-                btn = await page.query_selector(sel)
-                if btn:
-                    await btn.click()
-                    submitted = True
-                    break
-            except Exception:
-                continue
-        if not submitted:
-            raise RuntimeError("Allstate: submit button not found.")
+        await page.click('button[name="frmButton"]')
         await self._jitter(1500, 2500)
 
         # MFA method selection — click SMS then Continue
